@@ -9,7 +9,7 @@ All of this is powered by the **zig build system**.
 Clone this template repo:
 
 ```bash
-gh repo create aoc.zig --template Tomcat-42/aoc.zig-template
+gh repo create aoc.zig --template Tomcat-42/aoc.zig-template --public --clone
 ```
 
 Then Login to your [Advent of Code](https://adventofcode.com/) account to get your session
@@ -34,7 +34,7 @@ zig build --build-runner build_runner.zig -Dyear=2023 -Dday=1 --watch run
 
 You can pass `test` instead of run to run the unit tests instead:
 ```sh
-zig build --build-runner build_runner.zig -Dyear=2023 -Dday=1 --watch run
+zig build --build-runner build_runner.zig -Dyear=2023 -Dday=1 --watch test
 ```
 
 ## Details
@@ -52,12 +52,12 @@ const mem = std.mem;
 input: []const u8,
 allocator: mem.Allocator,
 
-pub fn part1(this: *const @This()) ?[]const u8 {
+pub fn part1(this: *const @This()) !?i64 {
     _ = this;
     return null;
 }
 
-pub fn part2(this: *const @This()) ?[]const u8 {
+pub fn part2(this: *const @This()) !?i64 {
     _ = this;
     return null;
 }
@@ -71,13 +71,14 @@ test "it should do nothing" {
         .allocator = allocator,
     };
 
-    try std.testing.expectEqual(null, problem.part1());
-    try std.testing.expectEqual(null, problem.part2());
+    try std.testing.expectEqual(null, try problem.part1());
+    try std.testing.expectEqual(null, try problem.part2());
 }
 ```
 
 You "solve" the problem by returning the solution from `part1` and `part2` function.
 The `input` field is the input data for the problem (see `build.zig` and `src/main.zig` 
-for details on how this is achieved).
+for details on how this is achieved). Note that you can return anything as the solution,
+for instance, if the solution is a string, you can return a `[]const u8` from any part.
 
 Add tests for small examples and edge cases in tests blocks at the end of the file.

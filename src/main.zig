@@ -2,6 +2,7 @@ const std = @import("std");
 const fs = std.fs;
 const io = std.io;
 const heap = std.heap;
+const fmt = std.fmt;
 
 const Problem = @import("problem");
 
@@ -18,8 +19,14 @@ pub fn main() !void {
     };
 
     if (try problem.part1()) |solution|
-        try stdout.print("{any}\n", .{solution});
+        try stdout.print(switch (@TypeOf(solution)) {
+            []const u8 => "{s}",
+            else => "{any}",
+        } ++ "\n", .{solution});
 
     if (try problem.part2()) |solution|
-        try stdout.print("{any}\n", .{solution});
+        try stdout.print(switch (@TypeOf(solution)) {
+            []const u8 => "{s}",
+            else => "{any}",
+        } ++ "\n", .{solution});
 }
