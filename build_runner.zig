@@ -427,7 +427,6 @@ pub fn main() !void {
     defer run.thread_pool.deinit();
 
     rebuild: while (true) {
-        _ = try std.io.getStdOut().write("\x1B[2J\x1B[H");
         runStepNames(
             gpa,
             builder,
