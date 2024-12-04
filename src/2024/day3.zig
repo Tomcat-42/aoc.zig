@@ -12,6 +12,8 @@ input: []const u8,
 allocator: mem.Allocator,
 
 const Token = union(enum) {
+    do,
+    @"don't",
     mul,
     @"(",
     integer: u64,
@@ -78,7 +80,7 @@ const Token = union(enum) {
         fn parseKeyword(this: *@This()) ?Token {
             var idx = this.pos;
 
-            while (idx < this.src.len and ascii.isAlphabetic(this.src[idx])) : (idx += 1) {}
+            while (idx < this.src.len and (ascii.isAlphabetic(this.src[idx]) or this.src[idx] == '\'')) : (idx += 1) {}
 
             if (LOOKUP_TABLE.get(this.src[this.pos..idx])) |token| {
                 this.pos = idx - 1;
@@ -110,6 +112,8 @@ const Token = union(enum) {
 
 const Instruction = union(enum) {
     mul: MulInstruction,
+    do: DoInstruction,
+    @"don't": DontInstruction,
 
     pub fn parse(tokens: *Token.Iterator) ?@This() {
         return switch (tokens.peek() orelse return null) {
@@ -117,13 +121,25 @@ const Instruction = union(enum) {
                 if (MulInstruction.parse(tokens)) |mul| break :blk .{ .mul = mul };
                 break :blk null;
             },
+            .do => blk: {
+                if (DoInstruction.parse(tokens)) |do| break :blk .{ .do = do };
+                break :blk null;
+            },
+            .@"don't" => blk: {
+                if (DontInstruction.parse(tokens)) |dont| break :blk .{ .@"don't" = dont };
+                break :blk null;
+            },
             else => null,
         };
     }
 
-    pub fn eval(this: *const @This()) u64 {
+    pub fn eval(this: *const @This()) union(enum) { u64: u64, bool: bool } {
         return switch (this.*) {
-            inline else => |instruction| return instruction.eval(),
+            inline else => |instruction| return switch (@TypeOf(instruction.eval())) {
+                u64 => .{ .u64 = instruction.eval() },
+                bool => .{ .bool = instruction.eval() },
+                else => unreachable,
+            },
         };
     }
 
@@ -161,6 +177,51 @@ const Instruction = union(enum) {
         }
     };
 
+    pub const DoInstruction = struct {
+        do: Token,
+        @"(": Token,
+        @")": Token,
+
+        pub fn parse(tokens: *Token.Iterator) ?@This() {
+            const do = tokens.expect(.do) orelse return null;
+            const @"(" = tokens.expect(.@"(") orelse return null;
+            const @")" = tokens.expect(.@")") orelse return null;
+
+            return .{
+                .do = do,
+                .@"(" = @"(",
+                .@")" = @")",
+            };
+        }
+
+        pub fn eval(this: *const @This()) bool {
+            _ = this; // autofix
+            return true;
+        }
+    };
+
+    pub const DontInstruction = struct {
+        @"don't": Token,
+        @"(": Token,
+        @")": Token,
+
+        pub fn parse(tokens: *Token.Iterator) ?@This() {
+            const @"don't" = tokens.expect(.@"don't") orelse return null;
+            const @"(" = tokens.expect(.@"(") orelse return null;
+            const @")" = tokens.expect(.@")") orelse return null;
+
+            return .{
+                .@"don't" = @"don't",
+                .@"(" = @"(",
+                .@")" = @")",
+            };
+        }
+        pub fn eval(this: *const @This()) bool {
+            _ = this; // autofix
+            return false;
+        }
+    };
+
     pub const Iterator = struct {
         tokens: *Token.Iterator,
 
@@ -193,18 +254,29 @@ pub fn part1(this: *const @This()) !?u128 {
     var instructions = Instruction.Iterator.init(&it);
 
     var sum: u64 = 0;
-    while (instructions.next()) |instruction|
-        sum += instruction.eval();
+    while (instructions.next()) |instruction| switch (instruction.eval()) {
+        .u64 => sum += instruction.eval().u64,
+        else => {},
+    };
 
     return sum;
 }
 
-pub fn part2(this: *const @This()) !?i64 {
-    _ = this;
-    return null;
+pub fn part2(this: *const @This()) !?u128 {
+    var it = Token.Iterator.init(this.input);
+    var instructions = Instruction.Iterator.init(&it);
+
+    var sum: u64 = 0;
+    var mul: u64 = 1;
+    while (instructions.next()) |instruction| switch (instruction.eval()) {
+        .u64 => |val| sum += val * mul,
+        .bool => |b| mul = @intFromBool(b),
+    };
+
+    return sum;
 }
 
-test "Example Input" {
+test "Example Input Part 1" {
     const allocator = std.testing.allocator;
     const input =
         \\xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))
@@ -216,7 +288,20 @@ test "Example Input" {
     };
 
     try std.testing.expectEqual(161, try problem.part1());
-    try std.testing.expectEqual(null, try problem.part2());
+}
+
+test "Example Input Part 2" {
+    const allocator = std.testing.allocator;
+    const input =
+        \\xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))
+    ;
+
+    const problem: @This() = .{
+        .input = input,
+        .allocator = allocator,
+    };
+
+    try std.testing.expectEqual(48, try problem.part2());
 }
 
 test "Token.Iterator" {
@@ -313,6 +398,40 @@ test "Parse MulInstruction" {
     try expectEqual(8, actual.eval());
 }
 
+test "Parse DoInstruction" {
+    const expectEqualDeep = std.testing.expectEqualDeep;
+    const expectEqual = std.testing.expectEqual;
+    const input =
+        \\do()
+    ;
+    const expected: Instruction.DoInstruction = .{
+        .do = .do,
+        .@"(" = .@"(",
+        .@")" = .@")",
+    };
+    var it = Token.Iterator.init(input);
+    const actual = Instruction.DoInstruction.parse(&it) orelse unreachable;
+    try expectEqualDeep(expected, actual);
+    try expectEqual(true, actual.eval());
+}
+
+test "Parse DontInstruction" {
+    const expectEqualDeep = std.testing.expectEqualDeep;
+    const expectEqual = std.testing.expectEqual;
+    const input =
+        \\don't()
+    ;
+    const expected: Instruction.DontInstruction = .{
+        .@"don't" = .@"don't",
+        .@"(" = .@"(",
+        .@")" = .@")",
+    };
+    var it = Token.Iterator.init(input);
+    const actual = Instruction.DontInstruction.parse(&it) orelse unreachable;
+    try expectEqualDeep(expected, actual);
+    try expectEqual(false, actual.eval());
+}
+
 test "Parse Instruction" {
     const expectEqualDeep = std.testing.expectEqualDeep;
     const expectEqual = std.testing.expectEqual;
@@ -334,5 +453,5 @@ test "Parse Instruction" {
     const actual = Instruction.parse(&it) orelse unreachable;
 
     try expectEqualDeep(expected, actual);
-    try expectEqual(8, actual.eval());
+    try expectEqual(8, actual.mul.eval());
 }
