@@ -48,6 +48,10 @@ pub fn build(b: *Build) !void {
         .optimize = optimize,
     });
 
+    // dependencies
+    const regex = b.dependency("regex", .{ .target = target, .optimize = optimize });
+    exe.root_module.addImport("regex", regex.module("regex"));
+
     // Year and day comptime selection
     const date = timestampToYearAndDay(
         std.time.timestamp(),
@@ -63,11 +67,7 @@ pub fn build(b: *Build) !void {
         "day",
         "The day of the Advent of Code challenge",
     ) orelse try fmt.allocPrint(b.allocator, "{d}", .{date.day});
-    // const options = b.addOptions();
-    // options.addOption([]const u8, "YEAR", YEAR);
-    // options.addOption([]const u8, "DAY", DAY);
-    // options.addOption([]const u8, "INPUT_DIR", INPUT_DIR);
-    // exe.root_module.addOptions("config", options);
+
     exe.root_module.addAnonymousImport(
         "problem",
         .{
@@ -148,17 +148,23 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    const run_lib_unit_tests = b.addRunArtifact(problem_unit_tests);
     const exe_unit_tests = b.addTest(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+    const run_lib_unit_tests = b.addRunArtifact(problem_unit_tests);
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     const test_step = b.step("test", "Run unit tests");
+
+    problem_unit_tests.step.dependOn(setup_step);
+    exe_unit_tests.step.dependOn(setup_step);
+
+    run_lib_unit_tests.step.dependOn(&problem_unit_tests.step);
+    run_exe_unit_tests.step.dependOn(&exe_unit_tests.step);
+
     test_step.dependOn(&run_lib_unit_tests.step);
     test_step.dependOn(&run_exe_unit_tests.step);
-    test_step.dependOn(setup_step);
 
     // clean
     const clean_step = b.step("clean", "Remove build artifacts");
