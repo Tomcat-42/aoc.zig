@@ -26,6 +26,7 @@ const http = std.http;
 const fmt = std.fmt;
 
 const Build = std.Build;
+const Module = Build.Module;
 const LazyPath = Build.LazyPath;
 const Step = Build.Step;
 const Allocator = std.mem.Allocator;
@@ -37,21 +38,6 @@ const INPUT_DIR = "input";
 const SRC_DIR = "src";
 
 pub fn build(b: *Build) !void {
-    // Targets
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-
-    const exe = b.addExecutable(.{
-        .name = "aoc.zig",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    // dependencies
-    const regex = b.dependency("regex", .{ .target = target, .optimize = optimize });
-    exe.root_module.addImport("regex", regex.module("regex"));
-
     // Year and day comptime selection
     const date = timestampToYearAndDay(
         std.time.timestamp(),
@@ -68,9 +54,34 @@ pub fn build(b: *Build) !void {
         "The day of the Advent of Code challenge",
     ) orelse try fmt.allocPrint(b.allocator, "{d}", .{date.day});
 
-    exe.root_module.addAnonymousImport(
+    // Targets and deps
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const problem_imports: []const Module.Import = &.{
+        // regex: {
+        //     const regex = b.dependency("regex", .{ .target = target, .optimize = optimize });
+        //     break :regex .{ .name = "regex", .module = regex.module("regex") };
+        // },
+        .{ .name = "util", .module = b.addModule(
+            "util",
+            .{
+                .root_source_file = b.path("src/util.zig"),
+                .target = target,
+                .optimize = optimize,
+            },
+        ) },
+    };
+    const exe = b.addExecutable(.{
+        .name = "aoc.zig",
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const problem = b.addModule(
         "problem",
         .{
+            .imports = problem_imports,
             .root_source_file = b.path(
                 try fs.path.join(
                     b.allocator,
@@ -85,9 +96,11 @@ pub fn build(b: *Build) !void {
                     },
                 ),
             ),
+            .target = target,
+            .optimize = optimize,
         },
     );
-    exe.root_module.addAnonymousImport(
+    const input = b.addModule(
         "input",
         .{
             .root_source_file = b.path(
@@ -104,8 +117,13 @@ pub fn build(b: *Build) !void {
                     },
                 ),
             ),
+            .target = target,
+            .optimize = optimize,
         },
     );
+
+    exe.root_module.addImport("problem", problem);
+    exe.root_module.addImport("input", input);
 
     // Setup Step:
     // - File -> ./input/{year}/{day}.txt. If not exist on disk, fetch from AoC API, save to disk, and then read.
@@ -153,12 +171,17 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
     const run_lib_unit_tests = b.addRunArtifact(problem_unit_tests);
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     const test_step = b.step("test", "Run unit tests");
 
     problem_unit_tests.step.dependOn(setup_step);
     exe_unit_tests.step.dependOn(setup_step);
+    for (problem_imports) |import| {
+        problem_unit_tests.root_module.addImport(import.name, import.module);
+        exe_unit_tests.root_module.addImport(import.name, import.module);
+    }
 
     run_lib_unit_tests.step.dependOn(&problem_unit_tests.step);
     run_exe_unit_tests.step.dependOn(&exe_unit_tests.step);
