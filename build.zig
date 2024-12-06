@@ -58,20 +58,6 @@ pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const problem_imports: []const Module.Import = &.{
-        // regex: {
-        //     const regex = b.dependency("regex", .{ .target = target, .optimize = optimize });
-        //     break :regex .{ .name = "regex", .module = regex.module("regex") };
-        // },
-        .{ .name = "util", .module = b.addModule(
-            "util",
-            .{
-                .root_source_file = b.path("src/util.zig"),
-                .target = target,
-                .optimize = optimize,
-            },
-        ) },
-    };
     const exe = b.addExecutable(.{
         .name = "aoc.zig",
         .root_source_file = b.path("src/main.zig"),
@@ -81,7 +67,6 @@ pub fn build(b: *Build) !void {
     const problem = b.addModule(
         "problem",
         .{
-            .imports = problem_imports,
             .root_source_file = b.path(
                 try fs.path.join(
                     b.allocator,
@@ -121,9 +106,30 @@ pub fn build(b: *Build) !void {
             .optimize = optimize,
         },
     );
+    const imports: []const Module.Import = &.{
+        // regex: {
+        //     const regex = b.dependency("regex", .{ .target = target, .optimize = optimize });
+        //     break :regex .{ .name = "regex", .module = regex.module("regex") };
+        // },
+        .{
+            .name = "util",
+            .module = b.addModule(
+                "util",
+                .{
+                    .root_source_file = b.path("src/util.zig"),
+                    .target = target,
+                    .optimize = optimize,
+                },
+            ),
+        },
+        .{ .name = "problem", .module = problem },
+        .{ .name = "input", .module = input },
+    };
 
-    exe.root_module.addImport("problem", problem);
-    exe.root_module.addImport("input", input);
+    for (imports) |import| {
+        exe.root_module.addImport(import.name, import.module);
+        problem.addImport(import.name, import.module);
+    }
 
     // Setup Step:
     // - File -> ./input/{year}/{day}.txt. If not exist on disk, fetch from AoC API, save to disk, and then read.
@@ -178,7 +184,7 @@ pub fn build(b: *Build) !void {
 
     problem_unit_tests.step.dependOn(setup_step);
     exe_unit_tests.step.dependOn(setup_step);
-    for (problem_imports) |import| {
+    for (imports) |import| {
         problem_unit_tests.root_module.addImport(import.name, import.module);
         exe_unit_tests.root_module.addImport(import.name, import.module);
     }
