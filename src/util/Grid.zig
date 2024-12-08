@@ -32,4 +32,13 @@ pub const Grid = struct {
         for (this.data) |row|
             this.allocator.free(row);
     }
+
+    pub fn format(self: @This(), comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
+        for (self.data) |row|
+            try writer.print("{s}\n", .{row});
+    }
+
+    pub fn within_bounds(self: @This(), x: i128, y: i128) bool {
+        return x >= 0 and y >= 0 and x < @as(i128, self.rows) and y < @as(i128, self.cols);
+    }
 };
