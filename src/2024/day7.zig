@@ -7,9 +7,7 @@ const Allocator = mem.Allocator;
 const StaticStringMap = std.StaticStringMap;
 const print = std.debug.print;
 const math = std.math;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Io = std.Io;
 
 pub fn ExponentialOperationTree(comptime NodeType: type) type {
     return struct {
@@ -60,7 +58,8 @@ pub fn ExponentialOperationTree(comptime NodeType: type) type {
     };
 }
 
-pub fn part1(this: *const @This()) !?u64 {
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
     const AddMul = struct {
         const Operation = enum { add, mul };
         const T = u64;
@@ -76,7 +75,7 @@ pub fn part1(this: *const @This()) !?u64 {
         }
     };
 
-    var lines = mem.tokenizeScalar(u8, this.input, '\n');
+    var lines = mem.tokenizeScalar(u8, input, '\n');
     var sum: u64 = 0;
     while (lines.next()) |line| {
         var it = mem.tokenizeSequence(u8, line, ": ");
@@ -92,12 +91,12 @@ pub fn part1(this: *const @This()) !?u64 {
         );
 
         var tree = ExponentialOperationTree(AddMul).init(.{ .value = first });
-        defer tree.deinit(this.allocator);
+        defer tree.deinit(allocator);
 
         while (params_it.next()) |p| {
             try tree.add(
                 try fmt.parseUnsigned(u64, p, 10),
-                this.allocator,
+                allocator,
             );
         }
 
@@ -107,7 +106,8 @@ pub fn part1(this: *const @This()) !?u64 {
     return sum;
 }
 
-pub fn part2(this: *const @This()) !?u64 {
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
     const AddMulConcat = struct {
         const Operation = enum { add, mul, concat };
         const T = u64;
@@ -129,7 +129,7 @@ pub fn part2(this: *const @This()) !?u64 {
         }
     };
 
-    var lines = mem.tokenizeScalar(u8, this.input, '\n');
+    var lines = mem.tokenizeScalar(u8, input, '\n');
     var sum: u64 = 0;
     while (lines.next()) |line| {
         var it = mem.tokenizeSequence(u8, line, ": ");
@@ -145,12 +145,12 @@ pub fn part2(this: *const @This()) !?u64 {
         );
 
         var tree = ExponentialOperationTree(AddMulConcat).init(.{ .value = first });
-        defer tree.deinit(this.allocator);
+        defer tree.deinit(allocator);
 
         while (params_it.next()) |p| {
             try tree.add(
                 try fmt.parseUnsigned(u64, p, 10),
-                this.allocator,
+                allocator,
             );
         }
 
@@ -161,6 +161,7 @@ pub fn part2(this: *const @This()) !?u64 {
 }
 
 test "Example Input" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\190: 10 19
@@ -174,11 +175,6 @@ test "Example Input" {
         \\292: 11 6 16 20
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(3749, try problem.part1());
-    try std.testing.expectEqual(11387, try problem.part2());
+    try std.testing.expectEqual(3749, try part1(io, allocator, input));
+    try std.testing.expectEqual(11387, try part2(io, allocator, input));
 }

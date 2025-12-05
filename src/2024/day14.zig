@@ -1,14 +1,12 @@
 const std = @import("std");
 const mem = std.mem;
 const fmt = std.fmt;
-const io = std.io;
 const math = std.math;
 const Thead = std.Thread;
 const ArrayList = std.ArrayList;
 const print = std.debug.print;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
 inline fn lcm(a: anytype, b: anytype) @TypeOf(a, b) {
     return @abs(a * b) / math.gcd(@abs(a), @abs(b));
@@ -83,15 +81,16 @@ pub fn print_tiles(robots: *const ArrayList(Robot)) void {
     }
 }
 
-pub fn part1(this: *const @This()) !?usize {
-    var robots = ArrayList(Robot).init(this.allocator);
-    defer robots.deinit();
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    var robots: ArrayList(Robot) = .empty;
+    defer robots.deinit(allocator);
 
-    var lines = mem.tokenizeScalar(u8, this.input, '\n');
+    var lines = mem.tokenizeScalar(u8, input, '\n');
     while (lines.next()) |line| {
         var robot = try Robot.scan(line);
         robot.move(100);
-        try robots.append(robot);
+        try robots.append(allocator, robot);
     }
 
     var q1: usize = 0;
@@ -137,15 +136,16 @@ pub fn part1(this: *const @This()) !?usize {
     return q1 * q2 * q3 * q4;
 }
 
-pub fn part2(this: *const @This()) !?usize {
-    var robots = ArrayList(Robot).init(this.allocator);
-    defer robots.deinit();
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    var robots: ArrayList(Robot) = .empty;
+    defer robots.deinit(allocator);
 
-    var lines = mem.tokenizeScalar(u8, this.input, '\n');
+    var lines = mem.tokenizeScalar(u8, input, '\n');
     while (lines.next()) |line| {
         var robot = try Robot.scan(line);
         robot.move(0);
-        try robots.append(robot);
+        try robots.append(allocator, robot);
     }
 
     var minimum_moves_until_loop: usize = robots.items[0].minimum_moves_until_loop();
@@ -162,6 +162,7 @@ pub fn part2(this: *const @This()) !?usize {
 }
 
 test "it should do nothing" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\p=0,4 v=3,-3
@@ -178,11 +179,6 @@ test "it should do nothing" {
         \\p=9,5 v=-3,-3
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    // try std.testing.expectEqual(12, try problem.part1());
-    try std.testing.expectEqual(null, try problem.part2());
+    // try std.testing.expectEqual(12, try part1(io, allocator, input));
+    try std.testing.expectEqual(null, try part2(io, allocator, input));
 }

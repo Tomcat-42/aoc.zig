@@ -6,23 +6,22 @@ const AutoHashMap = std.AutoHashMap;
 
 const util = @import("util");
 const NumberGrid = util.NumberGrid;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
 const Position = struct {
     i: isize,
     j: isize,
 };
 
-fn trail_score(grid: *const NumberGrid, initial: Position) !usize {
-    var s = ArrayList(Position).init(grid.allocator);
-    defer s.deinit();
-    var reachable = AutoHashMap(Position, void).init(grid.allocator);
+fn trail_score(grid: *const NumberGrid, initial: Position, allocator: Allocator) !usize {
+    var s: ArrayList(Position) = .empty;
+    defer s.deinit(allocator);
+    var reachable: AutoHashMap(Position, void) = .init(allocator);
     defer reachable.deinit();
 
-    try s.append(initial);
-    while (s.popOrNull()) |current_position| {
+    try s.append(allocator, initial);
+    while (s.pop()) |current_position| {
         const current_value = grid.at_unchecked(
             @intCast(current_position.i),
             @intCast(current_position.j),
@@ -45,20 +44,20 @@ fn trail_score(grid: *const NumberGrid, initial: Position) !usize {
         for (to) |new_pos| {
             if (grid.at(new_pos.i, new_pos.j)) |new_value|
                 if (new_value == current_value + 1)
-                    try s.append(new_pos);
+                    try s.append(allocator, new_pos);
         }
     }
 
     return reachable.count();
 }
 
-fn trail_rating(grid: *const NumberGrid, initial: Position) !usize {
-    var s = ArrayList(Position).init(grid.allocator);
-    defer s.deinit();
+fn trail_rating(grid: *const NumberGrid, initial: Position, allocator: Allocator) !usize {
+    var s: ArrayList(Position) = .empty;
+    defer s.deinit(allocator);
     var reachable: usize = 0;
 
-    try s.append(initial);
-    while (s.popOrNull()) |current_position| {
+    try s.append(allocator, initial);
+    while (s.pop()) |current_position| {
         const current_value = grid.at_unchecked(
             @intCast(current_position.i),
             @intCast(current_position.j),
@@ -81,15 +80,16 @@ fn trail_rating(grid: *const NumberGrid, initial: Position) !usize {
         for (to) |new_pos| {
             if (grid.at(new_pos.i, new_pos.j)) |new_value|
                 if (new_value == current_value + 1)
-                    try s.append(new_pos);
+                    try s.append(allocator, new_pos);
         }
     }
 
     return reachable;
 }
 
-pub fn part1(this: *const @This()) !?usize {
-    const grid = NumberGrid.init(this.allocator, this.input, '\n');
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    const grid = NumberGrid.init(allocator, input, '\n');
     defer grid.deinit();
 
     var sum: usize = 0;
@@ -99,14 +99,15 @@ pub fn part1(this: *const @This()) !?usize {
                 sum += try trail_score(&grid, .{
                     .i = @intCast(i),
                     .j = @intCast(j),
-                });
+                }, allocator);
         };
 
     return sum;
 }
 
-pub fn part2(this: *const @This()) !?usize {
-    const grid = NumberGrid.init(this.allocator, this.input, '\n');
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    const grid = NumberGrid.init(allocator, input, '\n');
     defer grid.deinit();
 
     var sum: usize = 0;
@@ -116,13 +117,14 @@ pub fn part2(this: *const @This()) !?usize {
                 sum += try trail_rating(&grid, .{
                     .i = @intCast(i),
                     .j = @intCast(j),
-                });
+                }, allocator);
         };
 
     return sum;
 }
 
 test "Example Input" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\89010123
@@ -135,11 +137,6 @@ test "Example Input" {
         \\10456732
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(36, try problem.part1());
-    try std.testing.expectEqual(81, try problem.part2());
+    try std.testing.expectEqual(36, try part1(io, allocator, input));
+    try std.testing.expectEqual(81, try part2(io, allocator, input));
 }

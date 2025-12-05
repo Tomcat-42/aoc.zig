@@ -8,15 +8,14 @@ const print = std.debug.print;
 const fmt = std.fmt;
 const sort = std.sort;
 const math = std.math;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
 const DirectedGraph = struct {
-    allocator: mem.Allocator,
+    allocator: Allocator,
     edges: AutoHashMap(u64, AutoHashMap(u64, void)),
 
-    pub fn init(allocator: mem.Allocator) !@This() {
+    pub fn init(allocator: Allocator) !@This() {
         return .{
             .allocator = allocator,
             .edges = AutoHashMap(
@@ -90,14 +89,14 @@ const DirectedGraph = struct {
 
     // Breadth-first search
     pub fn path(this: *const @This(), from: u64, to: u64) !bool {
-        var visited = AutoHashMap(u64, void).init(this.allocator);
+        var visited: AutoHashMap(u64, void) = .init(this.allocator);
         defer visited.deinit();
 
-        var q = PriorityQueue(
+        var q: PriorityQueue(
             u64,
             void,
             @This().priority,
-        ).init(this.allocator, {});
+        ) = .init(this.allocator, {});
         defer q.deinit();
 
         try q.add(from);
@@ -135,11 +134,12 @@ fn pageLessThan(rules: *const DirectedGraph, lhs: u64, rhs: u64) bool {
     return rules.path(lhs, rhs) catch @panic("pageLessThan");
 }
 
-pub fn part1(this: *const @This()) !?u64 {
-    var ordering = try DirectedGraph.init(this.allocator);
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
+    var ordering = try DirectedGraph.init(allocator);
     defer ordering.deinit();
 
-    var inputIt = mem.tokenizeSequence(u8, this.input, "\n\n");
+    var inputIt = mem.tokenizeSequence(u8, input, "\n\n");
     const pageOrderingRules = inputIt.next().?;
     const pagesList = inputIt.next().?;
 
@@ -157,7 +157,7 @@ pub fn part1(this: *const @This()) !?u64 {
     var pagesIt = mem.tokenizeScalar(u8, pagesList, '\n');
     while (pagesIt.next()) |line| {
         var pages = mem.tokenizeScalar(u8, line, ',');
-        var pagesArray = AutoArrayHashMap(u64, void).init(this.allocator);
+        var pagesArray: AutoArrayHashMap(u64, void) = .init(allocator);
         defer pagesArray.deinit();
 
         while (pages.next()) |page|
@@ -178,11 +178,12 @@ pub fn part1(this: *const @This()) !?u64 {
     return sum;
 }
 
-pub fn part2(this: *const @This()) !?u64 {
-    var ordering = try DirectedGraph.init(this.allocator);
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
+    var ordering = try DirectedGraph.init(allocator);
     defer ordering.deinit();
 
-    var inputIt = mem.tokenizeSequence(u8, this.input, "\n\n");
+    var inputIt = mem.tokenizeSequence(u8, input, "\n\n");
     const pageOrderingRules = inputIt.next().?;
     const pagesList = inputIt.next().?;
 
@@ -200,7 +201,7 @@ pub fn part2(this: *const @This()) !?u64 {
     var pagesIt = mem.tokenizeScalar(u8, pagesList, '\n');
     while (pagesIt.next()) |line| {
         var pages = mem.tokenizeScalar(u8, line, ',');
-        var pagesArray = AutoArrayHashMap(u64, void).init(this.allocator);
+        var pagesArray: AutoArrayHashMap(u64, void) = .init(allocator);
         defer pagesArray.deinit();
 
         while (pages.next()) |page|
@@ -264,6 +265,7 @@ test "DirectedGraph" {
 }
 
 test "Example Input" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\47|53
@@ -296,11 +298,6 @@ test "Example Input" {
         \\97,13,75,29,47
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(143, try problem.part1());
-    try std.testing.expectEqual(null, try problem.part2());
+    try std.testing.expectEqual(143, try part1(io, allocator, input));
+    try std.testing.expectEqual(null, try part2(io, allocator, input));
 }

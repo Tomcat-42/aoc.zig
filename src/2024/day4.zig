@@ -2,26 +2,25 @@ const std = @import("std");
 const mem = std.mem;
 const print = std.debug.print;
 const ArrayList = std.ArrayList;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
 const MatrixView = struct {
-    allocator: mem.Allocator,
+    allocator: Allocator,
 
     data: [][]const u8,
     rows: usize,
     cols: usize,
 
-    pub fn init(allocator: mem.Allocator, data: []const u8) !MatrixView {
-        var lines = ArrayList([]const u8).init(allocator);
+    pub fn init(allocator: Allocator, data: []const u8) !MatrixView {
+        var lines: ArrayList([]const u8) = .empty;
         var it = mem.tokenizeScalar(u8, data, '\n');
-        while (it.next()) |line| try lines.append(line);
+        while (it.next()) |line| try lines.append(allocator, line);
         const rows = lines.items.len;
         const cols = if (lines.items.len > 0) lines.items[0].len else 0;
         return MatrixView{
             .allocator = allocator,
-            .data = try lines.toOwnedSlice(),
+            .data = try lines.toOwnedSlice(allocator),
             .rows = rows,
             .cols = cols,
         };
@@ -32,11 +31,12 @@ const MatrixView = struct {
     }
 };
 
-pub fn part1(this: *const @This()) !?u64 {
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
     var count: u64 = 0;
     var matrix = try MatrixView.init(
-        this.allocator,
-        this.input,
+        allocator,
+        input,
     );
     defer matrix.deinit();
 
@@ -113,11 +113,12 @@ pub fn part1(this: *const @This()) !?u64 {
     return count;
 }
 
-pub fn part2(this: *const @This()) !?u64 {
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
     var count: u64 = 0;
     var matrix = try MatrixView.init(
-        this.allocator,
-        this.input,
+        allocator,
+        input,
     );
     defer matrix.deinit();
 
@@ -145,6 +146,7 @@ pub fn part2(this: *const @This()) !?u64 {
 }
 
 test "Example Part 1 Input 1" {
+    const io = std.testing.io;
     const expectEqual = std.testing.expectEqual;
     const allocator = std.testing.allocator;
     const input =
@@ -154,15 +156,12 @@ test "Example Part 1 Input 1" {
         \\XMAS.S
         \\.X....
     ;
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
 
-    try expectEqual(4, try problem.part1());
+    try expectEqual(4, try part1(io, allocator, input));
 }
 
 test "Example Part 1 Input 2" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\MMMSXXMASM
@@ -176,32 +175,26 @@ test "Example Part 1 Input 2" {
         \\MAMMMXMMMM
         \\MXMXAXMASX
     ;
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
 
-    try std.testing.expectEqual(18, try problem.part1());
+    try std.testing.expectEqual(18, try part1(io, allocator, input));
 }
 
 test "Example Part 2 Input 1" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\M.S
         \\.A.
         \\M.S
     ;
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
 
-    _ = try problem.part2();
+    _ = try part2(io, allocator, input);
 
-    try std.testing.expectEqual(1, try problem.part2());
+    try std.testing.expectEqual(1, try part2(io, allocator, input));
 }
 
 test "Example Part 2 Input 2" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\.M.S......
@@ -215,10 +208,6 @@ test "Example Part 2 Input 2" {
         \\M.M.M.M.M.
         \\..........
     ;
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
 
-    try std.testing.expectEqual(9, try problem.part2());
+    try std.testing.expectEqual(9, try part2(io, allocator, input));
 }

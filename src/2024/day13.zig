@@ -4,9 +4,8 @@ const print = std.debug.print;
 const assert = std.debug.assert;
 const fmt = std.fmt;
 const math = std.math;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
 const Machine = struct {
     const COST = struct {
@@ -132,16 +131,18 @@ const Machine = struct {
     }
 };
 
-pub fn part1(this: *const @This()) !?isize {
-    var machines = mem.tokenizeSequence(u8, this.input, "\n\n");
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?isize {
+    _ = .{ io, allocator };
+    var machines = mem.tokenizeSequence(u8, input, "\n\n");
     var sum: isize = 0;
     while (machines.next()) |str| sum += Machine.scan(str).solve();
 
     return sum;
 }
 
-pub fn part2(this: *const @This()) !?isize {
-    var machines = mem.tokenizeSequence(u8, this.input, "\n\n");
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?isize {
+    _ = .{ io, allocator };
+    var machines = mem.tokenizeSequence(u8, input, "\n\n");
     const additional = 10000000000000;
 
     var sum: isize = 0;
@@ -156,6 +157,7 @@ pub fn part2(this: *const @This()) !?isize {
 }
 
 test "it should do nothing" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\Button A: X+94, Y+34
@@ -175,11 +177,6 @@ test "it should do nothing" {
         \\Prize: X=18641, Y=10279
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(480, try problem.part1());
-    try std.testing.expectEqual(null, try problem.part2());
+    try std.testing.expectEqual(480, try part1(io, allocator, input));
+    try std.testing.expectEqual(null, try part2(io, allocator, input));
 }

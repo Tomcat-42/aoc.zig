@@ -3,14 +3,14 @@ const mem = std.mem;
 const fmt = std.fmt;
 const print = std.debug.print;
 const ArrayList = std.ArrayList;
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
-input: []const u8,
-allocator: mem.Allocator,
-
-pub fn part1(this: *const @This()) !?i64 {
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?i64 {
+    _ = .{ io, allocator };
     var lines = mem.tokenizeScalar(
         u8,
-        this.input,
+        input,
         '\n',
     );
 
@@ -47,10 +47,11 @@ pub fn part1(this: *const @This()) !?i64 {
     return counter;
 }
 
-pub fn part2(this: *const @This()) !?i64 {
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?i64 {
+    _ = io;
     var lines = mem.tokenizeScalar(
         u8,
-        this.input,
+        input,
         '\n',
     );
 
@@ -63,11 +64,11 @@ pub fn part2(this: *const @This()) !?i64 {
         );
 
         // The len should be known upfront
-        var arr = ArrayList(i64).init(this.allocator);
-        defer arr.deinit();
+        var arr: ArrayList(i64) = .empty;
+        defer arr.deinit(allocator);
 
         while (numbers.next()) |number|
-            try arr.append(try fmt.parseInt(i64, number, 10));
+            try arr.append(allocator, try fmt.parseInt(i64, number, 10));
 
         const len = arr.items.len;
 
@@ -104,6 +105,7 @@ pub fn part2(this: *const @This()) !?i64 {
 }
 
 test "it should do nothing" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\7 6 4 2 1
@@ -114,11 +116,6 @@ test "it should do nothing" {
         \\1 3 6 7 9
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(2, try problem.part1());
-    try std.testing.expectEqual(4, try problem.part2());
+    try std.testing.expectEqual(2, try part1(io, allocator, input));
+    try std.testing.expectEqual(4, try part2(io, allocator, input));
 }

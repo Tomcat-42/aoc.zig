@@ -3,17 +3,17 @@ const mem = std.mem;
 const fmt = std.fmt;
 const print = std.debug.print;
 const ArrayList = std.ArrayList;
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
-input: []const u8,
-allocator: mem.Allocator,
-
-pub fn part1(this: *const @This()) !?u64 {
-    var it = mem.tokenizeScalar(u8, this.input, '\n');
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
+    var it = mem.tokenizeScalar(u8, input, '\n');
     var id: usize = 1;
     var sum: u64 = 0;
     while (it.next()) |line| : (id += 1) {
-        const game = try parse_game(this.allocator, line);
-        defer this.allocator.free(game);
+        const game = try parse_game(allocator, line);
+        defer allocator.free(game);
 
         var toSum = true;
         for (game) |round| {
@@ -28,12 +28,13 @@ pub fn part1(this: *const @This()) !?u64 {
     return sum;
 }
 
-pub fn part2(this: *const @This()) !?u64 {
-    var it = mem.tokenizeScalar(u8, this.input, '\n');
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
+    var it = mem.tokenizeScalar(u8, input, '\n');
     var sum: u64 = 0;
     while (it.next()) |line| {
-        const game = try parse_game(this.allocator, line);
-        defer this.allocator.free(game);
+        const game = try parse_game(allocator, line);
+        defer allocator.free(game);
 
         var max = @Vector(3, u64){ 0, 0, 0 };
         for (game) |round| {
@@ -56,7 +57,7 @@ pub fn part2(this: *const @This()) !?u64 {
 }
 
 pub fn parse_game(
-    allocator: mem.Allocator,
+    allocator: Allocator,
     input: []const u8,
 ) ![]const @Vector(3, u64) {
     // 1. ignore the head: "Game {id}: "
@@ -66,8 +67,8 @@ pub fn parse_game(
     const tail = it.peek().?;
     it = mem.splitSequence(u8, tail, "; ");
 
-    var rounds = ArrayList(@Vector(3, u64)).init(allocator);
-    defer rounds.deinit();
+    var rounds: ArrayList(@Vector(3, u64)) = .empty;
+    defer rounds.deinit(allocator);
 
     while (it.next()) |round| {
         var r = @Vector(3, u64){ 0, 0, 0 };
@@ -85,13 +86,14 @@ pub fn parse_game(
                 r[2] += n;
             }
         }
-        try rounds.append(r);
+        try rounds.append(allocator, r);
     }
 
-    return rounds.toOwnedSlice();
+    return rounds.toOwnedSlice(allocator);
 }
 
 test "[part1] example" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
@@ -101,10 +103,5 @@ test "[part1] example" {
         \\Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(8, try problem.part1());
+    try std.testing.expectEqual(8, try part1(io, allocator, input));
 }

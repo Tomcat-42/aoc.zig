@@ -4,25 +4,25 @@ const print = std.debug.print;
 const ArrayList = std.ArrayList;
 const AutoHashMap = std.AutoHashMap;
 const sort = std.sort;
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
-input: []const u8,
-allocator: mem.Allocator,
-
-pub fn part1(this: *const @This()) !?u64 {
-    var l1 = ArrayList(i64).init(this.allocator);
-    defer l1.deinit();
-    var l2 = ArrayList(i64).init(this.allocator);
-    defer l2.deinit();
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
+    var l1: ArrayList(i64) = .empty;
+    defer l1.deinit(allocator);
+    var l2: ArrayList(i64) = .empty;
+    defer l2.deinit(allocator);
 
     var it = std.mem.tokenizeAny(
         u8,
-        this.input,
+        input,
         " \n",
     );
 
     while (it.peek()) |_| {
-        try l1.append(try std.fmt.parseInt(i64, it.next().?, 10));
-        try l2.append(try std.fmt.parseInt(i64, it.next().?, 10));
+        try l1.append(allocator, try std.fmt.parseInt(i64, it.next().?, 10));
+        try l2.append(allocator, try std.fmt.parseInt(i64, it.next().?, 10));
     }
 
     mem.sort(i64, l1.items, {}, sort.asc(i64));
@@ -36,20 +36,21 @@ pub fn part1(this: *const @This()) !?u64 {
     };
 }
 
-pub fn part2(this: *const @This()) !?i64 {
-    var l1 = ArrayList(i64).init(this.allocator);
-    defer l1.deinit();
-    var l2 = AutoHashMap(i64, i64).init(this.allocator);
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?i64 {
+    _ = io;
+    var l1: ArrayList(i64) = .empty;
+    defer l1.deinit(allocator);
+    var l2: AutoHashMap(i64, i64) = .init(allocator);
     defer l2.deinit();
 
     var it = std.mem.tokenizeAny(
         u8,
-        this.input,
+        input,
         " \n",
     );
 
     while (it.peek()) |_| {
-        try l1.append(try std.fmt.parseInt(i64, it.next().?, 10));
+        try l1.append(allocator, try std.fmt.parseInt(i64, it.next().?, 10));
         const entry = try l2.getOrPutValue(
             try std.fmt.parseInt(i64, it.next().?, 10),
             0,
@@ -69,6 +70,7 @@ pub fn part2(this: *const @This()) !?i64 {
 }
 
 test "example case" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\3   4
@@ -79,12 +81,6 @@ test "example case" {
         \\3   3
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(11, try problem.part1());
-    try std.testing.expectEqual(31, try problem.part2());
+    try std.testing.expectEqual(11, try part1(io, allocator, input));
+    try std.testing.expectEqual(31, try part2(io, allocator, input));
 }
-

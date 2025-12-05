@@ -8,9 +8,7 @@ const assert = std.debug.assert;
 const ArrayList = std.ArrayList;
 const AutoHashMap = std.AutoHashMap;
 const Allocator = mem.Allocator;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Io = std.Io;
 
 const Stones = struct {
     const MemoEntry = struct { usize, usize };
@@ -21,12 +19,12 @@ const Stones = struct {
 
     pub fn init(allocator: Allocator, input: []const u8) !Stones {
         var it = mem.tokenizeScalar(u8, input, ' ');
-        var stones = ArrayList(usize).init(allocator);
-        while (it.next()) |v| try stones.append(try fmt.parseUnsigned(usize, v, 10));
+        var stones: ArrayList(usize) = .empty;
+        while (it.next()) |v| try stones.append(allocator, try fmt.parseUnsigned(usize, v, 10));
 
         return .{
             .allocator = allocator,
-            .list = try stones.toOwnedSlice(),
+            .list = try stones.toOwnedSlice(allocator),
             .memo = AutoHashMap(MemoEntry, usize).init(allocator),
         };
     }
@@ -78,21 +76,24 @@ inline fn numOfDigits(n: usize) usize {
     return math.log10(n) + 1;
 }
 
-pub fn part1(this: *const @This()) !?usize {
-    var stones = try Stones.init(this.allocator, this.input[0 .. this.input.len - 1]);
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    var stones = try Stones.init(allocator, input[0 .. input.len - 1]);
     defer stones.deinit();
 
     return try stones.simulate(25);
 }
 
-pub fn part2(this: *const @This()) !?usize {
-    var stones = try Stones.init(this.allocator, this.input[0 .. this.input.len - 1]);
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    var stones = try Stones.init(allocator, input[0 .. input.len - 1]);
     defer stones.deinit();
 
     return try stones.simulate(75);
 }
 
 test "Example Input" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
 
     const input =
@@ -100,10 +101,5 @@ test "Example Input" {
         \\
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(55312, try problem.part1());
+    try std.testing.expectEqual(55312, try part1(io, allocator, input));
 }

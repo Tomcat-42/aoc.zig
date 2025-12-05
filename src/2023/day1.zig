@@ -3,20 +3,20 @@ const mem = std.mem;
 const fmt = std.fmt;
 const print = std.debug.print;
 const StringHashMap = std.StringHashMap;
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
-input: []const u8,
-allocator: mem.Allocator,
-
-pub fn part1(this: *const @This()) !?u64 {
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = .{ io, allocator };
     var idx: usize = 0;
-    const len: usize = this.input.len;
+    const len: usize = input.len;
 
     var sum: u64 = 0;
     var first: ?u64 = null;
     var last: ?u64 = null;
 
     while (idx < len) : (idx += 1) {
-        switch (parseChar(this.input[idx])) {
+        switch (parseChar(input[idx])) {
             .alpha => {},
             .numeric => |n| {
                 if (first == null) {
@@ -37,15 +37,16 @@ pub fn part1(this: *const @This()) !?u64 {
     return sum;
 }
 
-pub fn part2(this: *const @This()) !?u64 {
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?u64 {
+    _ = io;
     var idx: usize = 0;
-    const len: usize = this.input.len;
+    const len: usize = input.len;
 
     var sum: u64 = 0;
     var first: ?u64 = null;
     var last: ?u64 = null;
 
-    var digit_map = StringHashMap(u64).init(this.allocator);
+    var digit_map: StringHashMap(u64) = .init(allocator);
     defer digit_map.deinit();
 
     try digit_map.put("one", 1);
@@ -62,7 +63,7 @@ pub fn part2(this: *const @This()) !?u64 {
     var end: usize = 0;
 
     outer: while (idx < len) {
-        switch (parseChar(this.input[idx])) {
+        switch (parseChar(input[idx])) {
             // simple case, already have a number, just save it
             .numeric => |n| {
                 if (first == null) first = n;
@@ -88,7 +89,7 @@ pub fn part2(this: *const @This()) !?u64 {
 
                 inner_loop: while (end < len) : (end += 1) {
                     // Found a digit word, save it and continue
-                    if (digit_map.get(this.input[start .. end + 1])) |n| {
+                    if (digit_map.get(input[start .. end + 1])) |n| {
                         if (first == null) first = n;
                         last = n;
 
@@ -98,7 +99,7 @@ pub fn part2(this: *const @This()) !?u64 {
 
                     // if the current char is a letter, continue to inner loop because there is a possibility that it is part of a word
                     // else, if the current char is not a letter, the outer loop will handle it
-                    switch (parseChar(this.input[end])) {
+                    switch (parseChar(input[end])) {
                         .alpha => continue :inner_loop,
                         .newline, .numeric => {
                             idx += 1;
@@ -123,54 +124,39 @@ inline fn parseChar(char: u8) union(enum) { alpha: u8, numeric: u64, newline } {
 }
 
 test "[part1] it should parse one line" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input = "12aaaaaaaaaaaaaa3\n";
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(13, try problem.part1());
+    try std.testing.expectEqual(13, try part1(io, allocator, input));
 }
 
 test "[part2] it should parse one line" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input = "12aaaaaaaaone3two\n";
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(12, try problem.part2());
+    try std.testing.expectEqual(12, try part2(io, allocator, input));
 }
 
 test "[part2] Test line 100 edge case" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input = "drflhlxphzspnnzdbcfbpcbtddvd8three56\n";
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(86, try problem.part2());
+    try std.testing.expectEqual(86, try part2(io, allocator, input));
 }
 
 test "[part2] Test tricky edge case" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input = "sevenine\n";
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(79, try problem.part2());
+    try std.testing.expectEqual(79, try part2(io, allocator, input));
 }
 
 test "[part2] Example input" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\two1nine
@@ -183,10 +169,5 @@ test "[part2] Example input" {
         \\
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(281, try problem.part2());
+    try std.testing.expectEqual(281, try part2(io, allocator, input));
 }

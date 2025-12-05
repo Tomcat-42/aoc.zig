@@ -9,20 +9,18 @@ const Allocator = std.mem.Allocator;
 const util = @import("util");
 const CharGrid = util.CharGrid;
 const BoolGrid = util.BoolGrid;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Io = std.Io;
 
 const Position = struct { i: isize, j: isize };
 
 fn flood(allocator: Allocator, initial: Position, grid: *const CharGrid, visited: *const BoolGrid) !AutoArrayHashMap(Position, void) {
-    var stack = ArrayList(Position).init(allocator);
-    defer stack.deinit();
+    var stack: ArrayList(Position) = .empty;
+    defer stack.deinit(allocator);
 
-    var region = AutoArrayHashMap(Position, void).init(allocator);
+    var region: AutoArrayHashMap(Position, void) = .init(allocator);
 
-    try stack.append(initial);
-    while (stack.popOrNull()) |current_position| {
+    try stack.append(allocator, initial);
+    while (stack.pop()) |current_position| {
         const current_value = grid.at_unchecked(
             @intCast(current_position.i),
             @intCast(current_position.j),
@@ -44,7 +42,7 @@ fn flood(allocator: Allocator, initial: Position, grid: *const CharGrid, visited
 
         for (to) |new_pos|
             if (grid.at(new_pos.i, new_pos.j)) |new_value|
-                if (!visited.get_unchecked(@intCast(new_pos.i), @intCast(new_pos.j)) and new_value == current_value) try stack.append(new_pos);
+                if (!visited.get_unchecked(@intCast(new_pos.i), @intCast(new_pos.j)) and new_value == current_value) try stack.append(allocator, new_pos);
     }
 
     return region;
@@ -104,18 +102,19 @@ fn areaAndSides(region: *const AutoArrayHashMap(Position, void)) !struct { area:
     return .{ .area = region.keys().len, .sides = sides };
 }
 
-pub fn part1(this: *const @This()) !?usize {
-    const map = CharGrid.init(this.allocator, this.input);
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    const map = CharGrid.init(allocator, input);
     defer map.deinit();
 
-    const visited = BoolGrid.init(this.allocator, map.rows, map.cols);
+    const visited = BoolGrid.init(allocator, map.rows, map.cols);
     defer visited.deinit();
 
     var sum: usize = 0;
     for (0..map.rows) |i| for (0..map.cols) |j| {
         if (!visited.get_unchecked(@intCast(i), @intCast(j))) {
             var region = try flood(
-                this.allocator,
+                allocator,
                 .{ .i = @intCast(i), .j = @intCast(j) },
                 &map,
                 &visited,
@@ -130,18 +129,19 @@ pub fn part1(this: *const @This()) !?usize {
     return sum;
 }
 
-pub fn part2(this: *const @This()) !?usize {
-    const map = CharGrid.init(this.allocator, this.input);
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    const map = CharGrid.init(allocator, input);
     defer map.deinit();
 
-    const visited = BoolGrid.init(this.allocator, map.rows, map.cols);
+    const visited = BoolGrid.init(allocator, map.rows, map.cols);
     defer visited.deinit();
 
     var sum: usize = 0;
     for (0..map.rows) |i| for (0..map.cols) |j| {
         if (!visited.get_unchecked(@intCast(i), @intCast(j))) {
             var region = try flood(
-                this.allocator,
+                allocator,
                 .{ .i = @intCast(i), .j = @intCast(j) },
                 &map,
                 &visited,
@@ -156,6 +156,7 @@ pub fn part2(this: *const @This()) !?usize {
 }
 
 test "Test Input Pt1" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\RRRRIICCFF
@@ -170,11 +171,6 @@ test "Test Input Pt1" {
         \\MMMISSJEEE
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(1930, try problem.part1());
-    try std.testing.expectEqual(1206, try problem.part2());
+    try std.testing.expectEqual(1930, try part1(io, allocator, input));
+    try std.testing.expectEqual(1206, try part2(io, allocator, input));
 }

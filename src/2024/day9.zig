@@ -5,9 +5,7 @@ const fmt = std.fmt;
 const print = std.debug.print;
 const ArrayList = std.ArrayList;
 const Allocator = mem.Allocator;
-
-input: []const u8,
-allocator: Allocator,
+const Io = std.Io;
 
 const Filesystem = struct {
     allocator: Allocator,
@@ -15,18 +13,20 @@ const Filesystem = struct {
 
     fn init(allocator: Allocator, input: []const u8) !@This() {
         var it = mem.window(u8, input, 2, 2);
-        var entries = ArrayList(Block).init(allocator);
-        defer entries.deinit();
+        var entries: ArrayList(Block) = .empty;
+        defer entries.deinit(allocator);
 
         var id: usize = 0;
         while (it.next()) |window| : (id += 1) {
             try entries.appendNTimes(
+                allocator,
                 .{ .id = id, .tag = .file },
                 window[0] - '0',
             );
 
             if (window.len == 2 and window[1] != '0')
                 try entries.appendNTimes(
+                    allocator,
                     .{ .id = id, .tag = .frag },
                     window[1] - '0',
                 );
@@ -34,7 +34,7 @@ const Filesystem = struct {
 
         return .{
             .allocator = allocator,
-            .blocks = try entries.toOwnedSlice(),
+            .blocks = try entries.toOwnedSlice(allocator),
         };
     }
 
@@ -153,10 +153,11 @@ const Filesystem = struct {
     };
 };
 
-pub fn part1(this: *const @This()) !?usize {
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
     var fs = try Filesystem.init(
-        this.allocator,
-        this.input[0 .. this.input.len - 1], // stray newline
+        allocator,
+        input[0 .. input.len - 1], // stray newline
     );
     defer fs.deinit();
 
@@ -165,10 +166,11 @@ pub fn part1(this: *const @This()) !?usize {
     return fs.checksum();
 }
 
-pub fn part2(this: *const @This()) !?usize {
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
     var fs = try Filesystem.init(
-        this.allocator,
-        this.input[0 .. this.input.len - 1], // stray newline
+        allocator,
+        input[0 .. input.len - 1], // stray newline
     );
     defer fs.deinit();
 
@@ -178,17 +180,13 @@ pub fn part2(this: *const @This()) !?usize {
 }
 
 test "Example Input" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\2333133121414131402
         \\
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(1928, try problem.part1());
-    try std.testing.expectEqual(2858, try problem.part2());
+    try std.testing.expectEqual(1928, try part1(io, allocator, input));
+    try std.testing.expectEqual(2858, try part2(io, allocator, input));
 }

@@ -6,9 +6,8 @@ const print = std.debug.print;
 const AutoHashMap = std.AutoHashMap;
 const EnumSet = std.EnumSet;
 const Grid = util.Grid;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
 
 const Position = struct { row: usize, col: usize };
 const Direction = enum { Up, Down, Left, Right, None };
@@ -84,7 +83,7 @@ fn walkUntilNextObstacle(map: *Grid, direction: Direction, position: Position) ?
 }
 
 fn cyclic(map: *Grid, initialState: State) bool {
-    var cache = std.AutoHashMap(Position, EnumSet(Direction)).init(map.allocator);
+    var cache: std.AutoHashMap(Position, EnumSet(Direction)) = .init(map.allocator);
     defer cache.deinit();
 
     var state: ?State = initialState;
@@ -100,8 +99,9 @@ fn cyclic(map: *Grid, initialState: State) bool {
     } else false;
 }
 
-pub fn part1(this: *const @This()) !?usize {
-    var map = try Grid.init(this.allocator, this.input);
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    var map = try Grid.init(allocator, input);
     defer map.deinit();
 
     // find the guard
@@ -135,8 +135,9 @@ pub fn part1(this: *const @This()) !?usize {
     };
 }
 
-pub fn part2(this: *const @This()) !?usize {
-    var map = try Grid.init(this.allocator, this.input);
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?usize {
+    _ = io;
+    var map = try Grid.init(allocator, input);
     defer map.deinit();
 
     // find the guard
@@ -174,6 +175,7 @@ pub fn part2(this: *const @This()) !?usize {
 }
 
 test "Example Input" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\....#.....
@@ -188,11 +190,6 @@ test "Example Input" {
         \\......#...
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(41, try problem.part1());
-    try std.testing.expectEqual(6, try problem.part2());
+    try std.testing.expectEqual(41, try part1(io, allocator, input));
+    try std.testing.expectEqual(6, try part2(io, allocator, input));
 }

@@ -7,9 +7,7 @@ const print = std.debug.print;
 const StaticStringMap = std.StaticStringMap;
 const ArrayList = std.ArrayList;
 const Allocator = mem.Allocator;
-
-input: []const u8,
-allocator: mem.Allocator,
+const Io = std.Io;
 
 const Token = union(enum) {
     do,
@@ -70,11 +68,11 @@ const Token = union(enum) {
         }
 
         pub fn collect(this: *@This(), allocator: Allocator) ![]Token {
-            var tokens = ArrayList(Token).init(allocator);
-            errdefer tokens.deinit();
+            var tokens: ArrayList(Token) = .empty;
+            errdefer tokens.deinit(allocator);
 
-            while (this.next()) |token| try tokens.append(token);
-            return tokens.toOwnedSlice();
+            while (this.next()) |token| try tokens.append(allocator, token);
+            return tokens.toOwnedSlice(allocator);
         }
 
         fn parseKeyword(this: *@This()) ?Token {
@@ -241,16 +239,17 @@ const Instruction = union(enum) {
         }
 
         pub fn collect(this: *@This(), allocator: Allocator) ![]Instruction {
-            var instructions = ArrayList(Instruction).init(allocator);
-            errdefer instructions.deinit();
-            while (this.next()) |instruction| try instructions.append(instruction);
-            return instructions.toOwnedSlice();
+            var instructions: ArrayList(Instruction) = .empty;
+            errdefer instructions.deinit(allocator);
+            while (this.next()) |instruction| try instructions.append(allocator, instruction);
+            return instructions.toOwnedSlice(allocator);
         }
     };
 };
 
-pub fn part1(this: *const @This()) !?u128 {
-    var it = Token.Iterator.init(this.input);
+pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?u128 {
+    _ = .{ io, allocator };
+    var it = Token.Iterator.init(input);
     var instructions = Instruction.Iterator.init(&it);
 
     var sum: u64 = 0;
@@ -262,8 +261,9 @@ pub fn part1(this: *const @This()) !?u128 {
     return sum;
 }
 
-pub fn part2(this: *const @This()) !?u128 {
-    var it = Token.Iterator.init(this.input);
+pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?u128 {
+    _ = .{ io, allocator };
+    var it = Token.Iterator.init(input);
     var instructions = Instruction.Iterator.init(&it);
 
     var sum: u64 = 0;
@@ -277,31 +277,23 @@ pub fn part2(this: *const @This()) !?u128 {
 }
 
 test "Example Input Part 1" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(161, try problem.part1());
+    try std.testing.expectEqual(161, try part1(io, allocator, input));
 }
 
 test "Example Input Part 2" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
         \\xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))
     ;
 
-    const problem: @This() = .{
-        .input = input,
-        .allocator = allocator,
-    };
-
-    try std.testing.expectEqual(48, try problem.part2());
+    try std.testing.expectEqual(48, try part2(io, allocator, input));
 }
 
 test "Token.Iterator" {
