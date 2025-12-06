@@ -10,7 +10,7 @@ const BatIterator = struct {
     tokens: mem.TokenIterator(u8, .scalar),
 
     pub fn init(input: []const u8) @This() {
-        return BatIterator{ .tokens = mem.tokenizeScalar(u8, input, '\n') };
+        return .{ .tokens = mem.tokenizeScalar(u8, input, '\n') };
     }
 
     pub fn next(this: *@This()) ?[]const u8 {
@@ -36,13 +36,13 @@ pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?usize {
     return result;
 }
 
-fn biggestKDigits(line: []const u8, k: usize) usize {
+fn biggestKDigits(line: []const u8, comptime k: usize) usize {
     if (line.len < k) return 0;
 
     var result: usize = 0;
     var start: usize = 0;
 
-    for (0..k) |i| {
+    inline for (0..k) |i| {
         const remaining_picks = k - i - 1;
         const end = line.len - remaining_picks;
 
@@ -74,6 +74,5 @@ test "it should do nothing" {
     ;
 
     try std.testing.expectEqual(357, try part1(io, allocator, input));
-    try std.testing.expectEqual(null, try part2(io, allocator, input));
+    try std.testing.expectEqual(3121910778619, try part2(io, allocator, input));
 }
-
