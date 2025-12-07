@@ -49,10 +49,14 @@ pub fn transpose(self: *@This(), allocator: Allocator) !void {
     self.cols = old_rows;
 }
 
-pub fn format(self: @This(), writer: *Io.Writer) !void {
-    for (self.data) |row| try writer.print("{s}\n", .{row});
+pub inline fn at(self: @This(), x: anytype, y: @TypeOf(x)) u8 {
+    return self.data[@as(usize, x)][@as(usize, y)];
 }
 
 pub inline fn within_bounds(self: @This(), x: i128, y: i128) bool {
     return x >= 0 and y >= 0 and x < @as(i128, self.rows) and y < @as(i128, self.cols);
+}
+
+pub fn format(self: @This(), writer: *Io.Writer) !void {
+    for (self.data) |row| try writer.print("{s}\n", .{row});
 }
