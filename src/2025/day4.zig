@@ -118,7 +118,7 @@ inline fn fewerThan4Neighbors(
     return count < 4;
 }
 
-test "it should do nothing" {
+test "problem" {
     const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =

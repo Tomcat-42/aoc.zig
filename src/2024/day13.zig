@@ -156,7 +156,7 @@ pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?isize {
     return sum;
 }
 
-test "it should do nothing" {
+test "problem" {
     const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =

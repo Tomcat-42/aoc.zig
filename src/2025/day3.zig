@@ -63,7 +63,7 @@ fn biggestKDigits(line: []const u8, comptime k: usize) usize {
     return result;
 }
 
-test "it should do nothing" {
+test "problem" {
     const io = std.testing.io;
     const allocator = std.testing.allocator;
     const input =
