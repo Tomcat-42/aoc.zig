@@ -6,24 +6,20 @@ const AutoHashMapUnmanaged = std.AutoHashMapUnmanaged;
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
 
-const BatIterator = struct {
-    tokens: mem.TokenIterator(u8, .scalar),
+const util = @import("util");
 
-    pub fn init(input: []const u8) @This() {
-        return .{ .tokens = mem.tokenizeScalar(u8, input, '\n') };
+const BatIterator = util.Iterator([]const u8, .{ .scalar = '\n' }, struct {
+    fn p(line: []const u8) ![]const u8 {
+        return line;
     }
-
-    pub fn next(this: *@This()) ?[]const u8 {
-        return this.tokens.next();
-    }
-};
+}.p);
 
 pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?usize {
     _ = .{ io, allocator };
 
     var result: usize = 0;
     var bats: BatIterator = .init(input);
-    while (bats.next()) |bat| result += biggestKDigits(bat, 2);
+    while (try bats.next()) |bat| result += biggestKDigits(bat, 2);
     return result;
 }
 
@@ -32,7 +28,7 @@ pub fn part2(io: Io, allocator: Allocator, input: []const u8) !?usize {
 
     var result: usize = 0;
     var bats: BatIterator = .init(input);
-    while (bats.next()) |bat| result += biggestKDigits(bat, 12);
+    while (try bats.next()) |bat| result += biggestKDigits(bat, 12);
     return result;
 }
 

@@ -7,37 +7,22 @@ const Io = std.Io;
 const util = @import("util");
 const IntervalMap = util.IntervalMap;
 
-const IntervalIterator = struct {
-    tokens: mem.TokenIterator(u8, .scalar),
-
-    pub fn init(input: []const u8) IntervalIterator {
-        return .{ .tokens = mem.tokenizeScalar(u8, input, '\n') };
-    }
-
-    pub fn next(this: *IntervalIterator) !?IntervalMap.Interval {
-        const n = this.tokens.next() orelse return null;
-        const idx = mem.findScalar(u8, n, '-') orelse
+const IntervalIterator = util.Iterator(IntervalMap.Interval, .{ .scalar = '\n' }, struct {
+    fn p(line: []const u8) !IntervalMap.Interval {
+        const idx = mem.findScalar(u8, line, '-') orelse
             return error.InvalidIntervalFormat;
-
         return .{
-            try fmt.parseInt(i64, n[0..idx], 10),
-            try fmt.parseInt(i64, n[idx + 1 ..], 10),
+            try fmt.parseInt(i64, line[0..idx], 10),
+            try fmt.parseInt(i64, line[idx + 1 ..], 10),
         };
     }
-};
+}.p);
 
-const QueriesIterator = struct {
-    tokens: mem.TokenIterator(u8, .scalar),
-
-    pub fn init(input: []const u8) QueriesIterator {
-        return .{ .tokens = mem.tokenizeScalar(u8, input, '\n') };
+const QueriesIterator = util.Iterator(i64, .{ .scalar = '\n' }, struct {
+    fn p(line: []const u8) !i64 {
+        return fmt.parseInt(i64, line, 10);
     }
-
-    pub fn next(this: *QueriesIterator) !?i64 {
-        const n = this.tokens.next() orelse return null;
-        return try fmt.parseInt(i64, n, 10);
-    }
-};
+}.p);
 
 pub fn part1(io: Io, allocator: Allocator, input: []const u8) !?i64 {
     _ = .{io};

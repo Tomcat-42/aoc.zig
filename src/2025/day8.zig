@@ -18,24 +18,16 @@ pub inline fn distance(a: Point, b: Point) usize {
     return @reduce(.Add, squared);
 }
 
-const PointIterator = struct {
-    tokens: mem.TokenIterator(u8, .scalar),
-
-    pub fn init(input: []const u8) @This() {
-        return .{ .tokens = mem.tokenizeScalar(u8, input, '\n') };
-    }
-
-    pub fn next(this: *PointIterator) !?Point {
-        const line = this.tokens.next() orelse return null;
+const PointIterator = util.Iterator(Point, .{ .scalar = '\n' }, struct {
+    fn p(line: []const u8) !Point {
         var it = mem.tokenizeScalar(u8, line, ',');
-
         return .{
-            try fmt.parseUnsigned(usize, it.next() orelse return null, 10),
-            try fmt.parseUnsigned(usize, it.next() orelse return null, 10),
-            try fmt.parseUnsigned(usize, it.next() orelse return null, 10),
+            try fmt.parseUnsigned(usize, it.next() orelse return error.InvalidFormat, 10),
+            try fmt.parseUnsigned(usize, it.next() orelse return error.InvalidFormat, 10),
+            try fmt.parseUnsigned(usize, it.next() orelse return error.InvalidFormat, 10),
         };
     }
-};
+}.p);
 
 const Edge = struct {
     i: usize,
